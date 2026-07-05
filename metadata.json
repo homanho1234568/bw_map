@@ -1,0 +1,6 @@
+{
+  "name": "Bilibili World 互動展會地圖",
+  "description": "BW 2026 互動展會地圖與無料領取指南，整合場館地圖、攤位資訊、無料清單及 AI 導覽助手，助您輕鬆逛展！",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
