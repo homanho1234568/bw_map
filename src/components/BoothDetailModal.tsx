@@ -1,6 +1,6 @@
 import React from 'react';
-import { Booth, Freebie } from '../data';
-import { X, Gift, MapPin, Tag, Plus, Check, Star, Navigation, Calendar } from 'lucide-react';
+import type { Booth, Freebie } from '../types';
+import { X, Gift, MapPin, Tag, Plus, Check, Star, Navigation, Calendar, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface BoothDetailModalProps {
@@ -26,6 +26,22 @@ export default function BoothDetailModal({
 }: BoothDetailModalProps) {
   if (!booth) return null;
 
+  const parseLinks = (text: string) => {
+    if (!text) return [];
+    // If it contains commas or newlines, split by them
+    if (text.includes(',') || text.includes('，') || text.includes('\n')) {
+      return text.split(/[,，\n]+/).map(s => s.trim()).filter(Boolean);
+    }
+    // Extract URLs if there are multiple
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urls = text.match(urlRegex);
+    if (urls && urls.length > 1) {
+      return urls;
+    }
+    // Fallback: return the whole string (so a single URL with accidental spaces doesn't get shredded)
+    return [text.trim()];
+  };
+
   const getCategoryLabel = (cat: string) => {
     switch (cat) {
       case 'game': return '遊戲世界';
@@ -36,11 +52,13 @@ export default function BoothDetailModal({
       case 'bazaar': return '夢幻集市';
       case 'romance': return '戀戀心聲';
       case 'tech': return '數碼科技';
+      case 'unknown': return '分區待確認';
+      case 'other': return '綜合/其他';
       default: return '展會專區';
     }
   };
 
-  const getDifficultyBadge = (diff: 'easy' | 'medium' | 'hard') => {
+  const getDifficultyBadge = (diff: string) => {
     switch (diff) {
       case 'easy':
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">簡單 · 容易領取</span>;
@@ -48,6 +66,8 @@ export default function BoothDetailModal({
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">中等 · 需要互動</span>;
       case 'hard':
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">高難 · 熱門排隊</span>;
+      default:
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-50 text-zinc-700 border border-zinc-200">{diff}</span>;
     }
   };
 
@@ -126,14 +146,31 @@ export default function BoothDetailModal({
           </div>
 
           {/* Tags */}
-          <div className="flex flex-wrap gap-1.5">
-            {booth.tags.map((tag, idx) => (
-              <span key={idx} className="px-2.5 py-1 bg-zinc-50 border border-zinc-200 text-zinc-600 text-xs rounded-md flex items-center gap-1 font-semibold">
-                <Tag className="w-3 h-3 text-zinc-400" />
-                <span>{tag}</span>
-              </span>
-            ))}
-          </div>
+          {booth.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {booth.tags.map((tag, idx) => (
+                <span key={idx} className="px-2.5 py-1 bg-zinc-50 border border-zinc-200 text-zinc-600 text-xs rounded-md flex items-center gap-1 font-semibold">
+                  <Tag className="w-3 h-3 text-zinc-400" />
+                  <span>{tag}</span>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Booth Official Links */}
+          {booth.official_link && (
+            <div>
+              <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5 font-mono">官方公布資訊</h4>
+              <div className="flex flex-wrap gap-2">
+                {parseLinks(booth.official_link).map((link, idx) => (
+                  <a key={idx} href={link} target="_blank" rel="noopener noreferrer" className="px-2.5 py-1.5 bg-blue-50 border border-blue-200 text-blue-600 rounded-md text-xs font-bold flex items-center gap-1 hover:bg-blue-100 transition-colors">
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    查看官方發布 {idx > 0 ? idx + 1 : ''}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Freebies List */}
           <div>
@@ -206,6 +243,36 @@ export default function BoothDetailModal({
                       <p className="text-zinc-700 font-semibold leading-relaxed mt-0.5">
                         {freebie.condition}
                       </p>
+                      
+                      {(freebie.game_ip || freebie.anime_ip || freebie.official_link) && (
+                        <div className="mt-2 pt-2 border-t border-zinc-200 flex flex-col gap-1.5">
+                          {freebie.game_ip && (
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <span className="text-zinc-400 font-bold font-mono text-[9px] uppercase">遊戲作品</span>
+                              <span className="text-zinc-700 font-medium">{freebie.game_ip}</span>
+                            </div>
+                          )}
+                          {freebie.anime_ip && (
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <span className="text-zinc-400 font-bold font-mono text-[9px] uppercase">動漫作品</span>
+                              <span className="text-zinc-700 font-medium">{freebie.anime_ip}</span>
+                            </div>
+                          )}
+                          {freebie.official_link && (
+                            <div className="flex items-start gap-1.5 text-xs">
+                              <span className="text-zinc-400 font-bold font-mono text-[9px] uppercase mt-0.5 shrink-0">官方資訊</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {parseLinks(freebie.official_link).map((link, idx) => (
+                                  <a key={idx} href={link} target="_blank" rel="noopener noreferrer" className="px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-600 rounded text-[10px] font-bold flex items-center gap-1 hover:bg-blue-100 transition-colors">
+                                    <ExternalLink className="w-3 h-3" />
+                                    <span>查看連結 {idx > 0 ? idx + 1 : ''}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Mark as Claimed directly inside Detail Modal */}

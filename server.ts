@@ -1,13 +1,12 @@
+import "dotenv/config";
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
-import { BOOTHS, HALLS } from './src/data.js'; // Use .js extension since we are running as ES Module under tsx in dev
+import { createClient } from '@supabase/supabase-js'; // Use .js extension since we are running as ES Module under tsx in dev
 
-// Derive __dirname in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Removed ESM __dirname deriving as it is unused and breaks CJS builds
 
 async function startServer() {
   const app = express();
@@ -16,9 +15,12 @@ async function startServer() {
   app.use(express.json());
 
   // API Route: Get all exhibition data directly
-  app.get('/api/exhibition', (req, res) => {
-    res.json({ halls: HALLS, booths: BOOTHS });
+  
+  app.get('/api/exhibition', async (req, res) => {
+    // If you need server side fetching
+    res.json({ halls: [], booths: [] });
   });
+
 
   // API Route: AI Assistant Chat
   app.post('/api/chat', async (req, res) => {
@@ -28,7 +30,19 @@ async function startServer() {
         return res.status(400).json({ error: 'Message is required' });
       }
 
+      
+      let supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+      supabaseUrl = supabaseUrl.trim().replace(/\/+$/, '');
+      const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+      const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
+      let boothsData = [];
+      if (supabase) {
+        const { data } = await supabase.from('booths').select('*, freebies(*)');
+        boothsData = data || [];
+      }
+
       const apiKey = process.env.GEMINI_API_KEY;
+
       if (!apiKey) {
         return res.status(500).json({ 
           error: 'Gemini API Key is not configured. Please add GEMINI_API_KEY to your Secrets panel under Settings.' 
@@ -50,7 +64,7 @@ async function startServer() {
 你的任務是協助參展觀眾（使用者）規劃路線、查詢攤位位置、了解無料（免費周邊/贈品）領取條件、以及提供逛展攻略。
 
 你擁有以下 2026 年 BW 展會的完整攤位和無料資訊：
-${JSON.stringify(BOOTHS, null, 2)}
+${JSON.stringify(boothsData, null, 2)}
 
 請遵守以下【回覆規範】：
 1. 語言風格：請使用「繁體中文」（Traditional Chinese）回覆，語氣要親切活潑，可以適度融入一些動漫梗、B站梗（如：乾杯、小電視、乾巴爹、大佬）。

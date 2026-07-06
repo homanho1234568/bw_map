@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Freebie, Booth, HALLS, BOOTHS } from '../data';
+import type { Freebie, Booth, Hall } from '../types';
 import { 
   Check, 
   Trash2, 
@@ -25,6 +25,8 @@ import {
 } from '../utils/routeOptimizer';
 
 interface UserChecklistProps {
+  halls: Hall[];
+  booths: Booth[];
   checklist: Array<{ freebie: Freebie; booth: Booth }>;
   route: Booth[];
   isClaimed: (freebieId: string) => boolean;
@@ -39,6 +41,8 @@ interface UserChecklistProps {
 }
 
 export default function UserChecklist({
+  halls,
+  booths,
   checklist,
   route,
   isClaimed,
@@ -78,7 +82,7 @@ export default function UserChecklist({
   const estimatedMinutes = Math.max(1, Math.round(totalMeters / 70)); // Assuming 70m per min average walking speed
 
   // Fetch convenient along-the-way recommendations
-  const recommendations = getConvenientRecommendations(route, BOOTHS, 3);
+  const recommendations = getConvenientRecommendations(route, booths, 3);
 
   const handleOptimizeRoute = () => {
     if (onSetRoute && route.length > 1) {
@@ -384,11 +388,11 @@ export default function UserChecklist({
                   </div>
                 </div>
               ) : (
-                /* GROUPED BY HALLS VIEW */
+                /* GROUPED BY halls VIEW */
                 <div className="relative pl-4 border-l-2 border-zinc-100 ml-2 space-y-4 py-2">
                   {sortedRouteHalls.map((hallId) => {
                     const booths = groupedRoute[hallId];
-                    const hallInfo = HALLS.find(h => h.id === hallId);
+                    const hallInfo = halls.find(h => h.id === hallId);
 
                     return (
                       <div key={hallId} className="relative">

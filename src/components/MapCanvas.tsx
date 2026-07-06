@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HALLS, BOOTHS, Booth, Hall } from '../data';
+import type { Booth, Hall } from '../types';
 import { ZoomIn, ZoomOut, Maximize2, Gift, MapPin, Compass, Info, Route } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getGlobalCoordinates, HALL_POSITIONS } from '../utils/routeOptimizer';
 
 interface MapCanvasProps {
+  halls: Hall[];
+  booths: Booth[];
   selectedHallId: string | null;
   onSelectHall: (hallId: string | null) => void;
   selectedBoothId: string | null;
@@ -18,6 +20,8 @@ interface MapCanvasProps {
 }
 
 export default function MapCanvas({
+  halls,
+  booths,
   selectedHallId,
   onSelectHall,
   selectedBoothId,
@@ -31,7 +35,7 @@ export default function MapCanvas({
 }: MapCanvasProps) {
   const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
 
-  const [zoomLevel, setZoomLevel] = useState<number>(0.55); // Fit 1000x1000 in ~550px container by default
+  const [zoomLevel, setZoomLevel] = useState<number>(0.35); // Fit 1500x1500 in ~550px container by default
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
 
@@ -71,8 +75,8 @@ export default function MapCanvas({
     if (hasDraggedRef.current) {
       // Adjust dragging speed by zoom level so it feels 1:1 with cursor
       setPan({
-        x: clamp(panStartRef.current.x + dx / zoomLevel, -500, 500),
-        y: clamp(panStartRef.current.y + dy / zoomLevel, -500, 500)
+        x: clamp(panStartRef.current.x + dx / zoomLevel, -750, 750),
+        y: clamp(panStartRef.current.y + dy / zoomLevel, -750, 750)
       });
     }
   };
@@ -105,12 +109,12 @@ export default function MapCanvas({
     const mx = clickX - centerX;
     const my = clickY - centerY;
 
-    const nextZoom = Math.min(2.5, zoomLevel + 0.35);
+    const nextZoom = Math.min(10.0, zoomLevel + 0.35);
 
     if (nextZoom !== zoomLevel) {
       const factor = (1 / zoomLevel) - (1 / nextZoom);
-      const nextPanX = clamp(pan.x - mx * factor, -500, 500);
-      const nextPanY = clamp(pan.y - my * factor, -500, 500);
+      const nextPanX = clamp(pan.x - mx * factor, -750, 750);
+      const nextPanY = clamp(pan.y - my * factor, -750, 750);
 
       setZoomLevel(nextZoom);
       setPan({ x: nextPanX, y: nextPanY });
@@ -128,9 +132,9 @@ export default function MapCanvas({
       const zoomFactor = 1.08;
       let nextZoom = zoomLevel;
       if (e.deltaY < 0) {
-        nextZoom = Math.min(2.5, zoomLevel * zoomFactor);
+        nextZoom = Math.min(10.0, zoomLevel * zoomFactor);
       } else {
-        nextZoom = Math.max(0.4, zoomLevel / zoomFactor);
+        nextZoom = Math.max(0.25, zoomLevel / zoomFactor);
       }
 
       if (nextZoom !== zoomLevel) {
@@ -148,8 +152,8 @@ export default function MapCanvas({
 
         // Apply our stunning formula:
         const factor = (1 / zoomLevel) - (1 / nextZoom);
-        const nextPanX = clamp(pan.x - mx * factor, -500, 500);
-        const nextPanY = clamp(pan.y - my * factor, -500, 500);
+        const nextPanX = clamp(pan.x - mx * factor, -750, 750);
+        const nextPanY = clamp(pan.y - my * factor, -750, 750);
 
         setZoomLevel(nextZoom);
         setPan({ x: nextPanX, y: nextPanY });
@@ -167,7 +171,7 @@ export default function MapCanvas({
     // 1. Check if there's a focused booth (either highlighted or selected)
     const activeBoothId = highlightedBoothId || selectedBoothId;
     if (activeBoothId) {
-      const booth = BOOTHS.find(b => b.id === activeBoothId);
+      const booth = booths.find(b => b.id === activeBoothId);
       if (booth) {
         const targetZoom = 1.35; // A slightly higher zoom for booth focus
         setZoomLevel(targetZoom);
@@ -179,8 +183,8 @@ export default function MapCanvas({
 
         const coords = getGlobalCoordinates(booth);
         setPan({
-          x: 500 - coords.x,
-          y: 500 - coords.y
+          x: 750 - coords.x,
+          y: 750 - coords.y
         });
         return; // Done
       }
@@ -193,23 +197,23 @@ export default function MapCanvas({
         const targetZoom = 1.1;
         setZoomLevel(targetZoom);
         setPan({
-          x: 500 - pos.centerX,
-          y: 500 - pos.centerY
+          x: 750 - pos.centerX,
+          y: 750 - pos.centerY
         });
         return; // Done
       }
     }
 
     // 3. Fallback: reset zoom and center
-    setZoomLevel(0.55);
+    setZoomLevel(0.35);
     setPan({ x: 0, y: 0 });
   }, [highlightedBoothId, selectedBoothId, selectedHallId]);
 
   // Zoom helpers
-  const handleZoomIn = () => setZoomLevel(prev => Math.min(2.5, prev + 0.15));
-  const handleZoomOut = () => setZoomLevel(prev => Math.max(0.4, prev - 0.15));
+  const handleZoomIn = () => setZoomLevel(prev => Math.min(10.0, prev + 0.15));
+  const handleZoomOut = () => setZoomLevel(prev => Math.max(0.25, prev - 0.15));
   const handleResetZoom = () => {
-    setZoomLevel(0.55);
+    setZoomLevel(0.35);
     setPan({ x: 0, y: 0 });
     onSelectHall(null);
   };
@@ -234,8 +238,8 @@ export default function MapCanvas({
   };
 
   const isZoomedOut = zoomLevel < 0.75;
-  const currentBoothObj = BOOTHS.find(b => b.id === selectedBoothId) || null;
-  const currentHallObj = selectedHallId ? HALLS.find(h => h.id === selectedHallId) : null;
+  const currentBoothObj = booths.find(b => b.id === selectedBoothId) || null;
+  const currentHallObj = selectedHallId ? halls.find(h => h.id === selectedHallId) : null;
 
   return (
     <div id="map-container" ref={containerRef} className="relative w-full h-[60vh] min-h-[450px] lg:h-[580px] bg-zinc-50 rounded-2xl border border-zinc-200 overflow-hidden shadow-sm flex flex-col justify-between">
@@ -247,7 +251,7 @@ export default function MapCanvas({
             <button 
               onClick={() => {
                 onSelectHall(null);
-                setZoomLevel(0.55);
+                setZoomLevel(0.35);
                 setPan({ x: 0, y: 0 });
               }}
               className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-zinc-50 text-black border border-zinc-200 rounded-lg shadow-sm font-extrabold text-xs transition-all cursor-pointer"
@@ -307,8 +311,8 @@ export default function MapCanvas({
           <motion.div 
             className="relative bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-md shrink-0 origin-center"
             style={{ 
-              width: '1000px', 
-              height: '1000px',
+              width: '1500px',
+              height: '1500px',
             }}
             animate={{ 
               scale: zoomLevel,
@@ -330,48 +334,48 @@ export default function MapCanvas({
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:1.5rem_1.5rem] opacity-65 pointer-events-none" />
 
             {/* SVG Clover Layout Geometry */}
-              <svg viewBox="0 0 1000 1000" className="absolute inset-0 w-full h-full select-none z-0">
+              <svg viewBox="0 0 1500 1500" className="absolute inset-0 w-full h-full select-none z-0">
                 {/* Radial Guide Ring Paths */}
-                <circle cx="500" cy="500" r="185" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4 4" />
-                <circle cx="500" cy="500" r="300" fill="none" stroke="#e2e8f0" strokeWidth="1" />
-                <circle cx="500" cy="500" r="420" fill="none" stroke="#e2e8f0" strokeWidth="1" />
+                <circle cx="750" cy="750" r="277.5" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4 4" />
+                <circle cx="750" cy="750" r="450" fill="none" stroke="#e2e8f0" strokeWidth="1" />
+                <circle cx="750" cy="750" r="630" fill="none" stroke="#e2e8f0" strokeWidth="1" />
                 
                 {/* Radial spoke corridors */}
-                <line x1="150" y1="150" x2="850" y2="850" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
-                <line x1="850" y1="150" x2="150" y2="850" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
+                <line x1="225" y1="225" x2="1275" y2="1275" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
+                <line x1="1275" y1="225" x2="225" y2="1275" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
 
                 {/* Symmetrical Clover Leaf colored zones (4 petals) rotated by 45 degrees */}
                 {/* NW Petal (Game Blue) */}
-                <rect x="-180" y="-260" width="360" height="520" rx="64" transform="translate(230, 230) rotate(45)" fill="#eff6ff" stroke="#3b82f6" strokeWidth="2.5" fillOpacity="0.3" strokeOpacity="0.4" />
-                <text x="335" y="435" fill="#2563eb" className="text-[12.5px] font-black font-sans tracking-tight" textAnchor="middle">
+                <rect x="-270" y="-390" width="540" height="780" rx="96" transform="translate(345, 345) rotate(45)" fill="#eff6ff" stroke="#3b82f6" strokeWidth="2.5" fillOpacity="0.3" strokeOpacity="0.4" />
+                <text x="502" y="652" fill="#2563eb" className="text-[12.5px] font-black font-sans tracking-tight" textAnchor="middle">
                   遊戲世界展區 (3.1H / 4.1H)
                 </text>
                 
                 {/* NE Petal (Virtual/Toys Pink) */}
-                <rect x="-180" y="-260" width="360" height="520" rx="64" transform="translate(770, 230) rotate(-45)" fill="#fdf2f8" stroke="#ec4899" strokeWidth="2.5" fillOpacity="0.3" strokeOpacity="0.4" />
-                <text x="665" y="435" fill="#db2777" className="text-[12.5px] font-black font-sans tracking-tight" textAnchor="middle">
+                <rect x="-270" y="-390" width="540" height="780" rx="96" transform="translate(1155, 345) rotate(-45)" fill="#fdf2f8" stroke="#ec4899" strokeWidth="2.5" fillOpacity="0.3" strokeOpacity="0.4" />
+                <text x="997" y="652" fill="#db2777" className="text-[12.5px] font-black font-sans tracking-tight" textAnchor="middle">
                   虛擬樂園 & 模玩 & 夢幻集市 (1.1H / 2.1H)
                 </text>
 
                 {/* SW Petal (Anime Stage Purple) */}
-                <rect x="-180" y="-260" width="360" height="520" rx="64" transform="translate(230, 770) rotate(-45)" fill="#faf5ff" stroke="#a855f7" strokeWidth="2.5" fillOpacity="0.3" strokeOpacity="0.4" />
-                <text x="335" y="575" fill="#7c3aed" className="text-[12.5px] font-black font-sans tracking-tight" textAnchor="middle">
+                <rect x="-270" y="-390" width="540" height="780" rx="96" transform="translate(345, 1155) rotate(-45)" fill="#faf5ff" stroke="#a855f7" strokeWidth="2.5" fillOpacity="0.3" strokeOpacity="0.4" />
+                <text x="502" y="862" fill="#7c3aed" className="text-[12.5px] font-black font-sans tracking-tight" textAnchor="middle">
                   動漫舞台與遊戲世界 (5.1H / 6.1H)
                 </text>
 
                 {/* SE Petal (UP space / Ticket Amber) */}
-                <rect x="-180" y="-260" width="360" height="520" rx="64" transform="translate(770, 770) rotate(45)" fill="#fffbeb" stroke="#f59e0b" strokeWidth="2.5" fillOpacity="0.3" strokeOpacity="0.4" />
-                <text x="665" y="575" fill="#d97706" className="text-[12.5px] font-black font-sans tracking-tight" textAnchor="middle">
+                <rect x="-270" y="-390" width="540" height="780" rx="96" transform="translate(1155, 1155) rotate(45)" fill="#fffbeb" stroke="#f59e0b" strokeWidth="2.5" fillOpacity="0.3" strokeOpacity="0.4" />
+                <text x="997" y="862" fill="#d97706" className="text-[12.5px] font-black font-sans tracking-tight" textAnchor="middle">
                   創作者空間 & 大舞台 (7.1H / 8.1H)
                 </text>
 
                 {/* Central Plaza water circles */}
-                <circle cx="500" cy="500" r="70" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
-                <circle cx="500" cy="500" r="62" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3 3" />
+                <circle cx="750" cy="750" r="105" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+                <circle cx="750" cy="750" r="93" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3 3" />
               </svg>
 
               {/* Central Plaza Floating Label */}
-              <div className="absolute left-[435px] top-[435px] w-[130px] h-[130px] rounded-full bg-white border border-zinc-200 shadow-md flex flex-col items-center justify-center text-center z-10">
+              <div className="absolute left-[652px] top-[652px] w-[195px] h-[195px] rounded-full bg-white border border-zinc-200 shadow-md flex flex-col items-center justify-center text-center z-10">
                 <span className="text-[12px] font-black text-black font-display tracking-tight">中央廣場</span>
                 <span className="text-[8px] text-zinc-400 font-mono font-bold">CENTRAL PLAZA</span>
                 <div className="w-9 h-9 rounded-full border border-dashed border-zinc-200 mt-1 animate-[spin_60s_linear_infinite]" />
@@ -379,7 +383,7 @@ export default function MapCanvas({
 
               {/* Symmetrical Cardinal Lobbies with High Fidelity Real Layout Styling */}
               {/* North Lobby */}
-              <div className="absolute top-[85px] left-[500px] -translate-x-1/2 z-10 flex flex-col items-center pointer-events-none">
+              <div className="absolute top-[127px] left-[750px] -translate-x-1/2 z-10 flex flex-col items-center pointer-events-none">
                 <div className="px-3.5 py-1.5 bg-red-600 text-white border border-red-700 rounded-lg text-[10px] font-black shadow-sm uppercase tracking-wider font-sans flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-red-300 animate-ping" />
                   <span>北廳入口 (VIP / 邀請函)</span>
@@ -387,7 +391,7 @@ export default function MapCanvas({
               </div>
 
               {/* South Lobby (Start point) */}
-              <div className="absolute bottom-[85px] left-[500px] -translate-x-1/2 z-10 flex flex-col items-center pointer-events-none">
+              <div className="absolute bottom-[127px] left-[750px] -translate-x-1/2 z-10 flex flex-col items-center pointer-events-none">
                 <div className="px-4 py-2 bg-purple-700 text-white border border-purple-800 rounded-lg text-[10.5px] font-black shadow-md uppercase tracking-wider font-sans flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span>南大廳 (7.1H 檢票大廳)</span>
@@ -395,14 +399,14 @@ export default function MapCanvas({
               </div>
 
               {/* West Lobby */}
-              <div className="absolute left-[85px] top-[500px] -translate-y-1/2 z-10 flex flex-col items-center pointer-events-none">
+              <div className="absolute left-[127px] top-[750px] -translate-y-1/2 z-10 flex flex-col items-center pointer-events-none">
                 <div className="px-2.5 py-2.5 bg-zinc-800 text-white border border-zinc-950 rounded-lg text-[10px] font-black shadow-sm uppercase tracking-wider font-sans [writing-mode:vertical-lr] text-center flex items-center gap-1">
                   <span>西大廳 (2號線地鐵)</span>
                 </div>
               </div>
 
               {/* East Lobby */}
-              <div className="absolute right-[85px] top-[500px] -translate-y-1/2 z-10 flex flex-col items-center pointer-events-none">
+              <div className="absolute right-[127px] top-[750px] -translate-y-1/2 z-10 flex flex-col items-center pointer-events-none">
                 <div className="px-2.5 py-2.5 bg-zinc-800 text-white border border-zinc-950 rounded-lg text-[10px] font-black shadow-sm uppercase tracking-wider font-sans [writing-mode:vertical-lr] text-center flex items-center gap-1">
                   <span>東大廳入口</span>
                 </div>
@@ -428,8 +432,8 @@ export default function MapCanvas({
                   {/* Connecting Line from Entrance to the very first stop */}
                   {(() => {
                     const firstBooth = route[0];
-                    const startX = 500;
-                    const startY = 940;
+                    const startX = 750;
+                    const startY = 1410;
                     const firstCoords = getGlobalCoordinates(firstBooth);
                     return (
                       <g key="route-start">
@@ -500,12 +504,12 @@ export default function MapCanvas({
                 </svg>
               )}
 
-              {/* Render 8 Hall Cards simultaneously on the 1000x1000 grid */}
-              {HALLS.map((hall) => {
+              {/* Render 8 Hall Cards simultaneously on the 1500x1500 grid */}
+              {halls.map((hall) => {
                 const pos = HALL_POSITIONS[hall.id];
                 const isSelectedHall = selectedHallId === hall.id;
                 
-                const boothsInHall = BOOTHS.filter(b => b.hall === hall.id);
+                const boothsInHall = booths.filter(b => b.hall === hall.id);
                 const filteredBooths = boothsInHall.filter(booth => {
                   if (filterCategory !== 'all' && booth.category !== filterCategory) return false;
                   if (searchQuery.trim() !== '') {

@@ -1,4 +1,4 @@
-import { Booth } from '../data';
+import type { Booth } from '../types';
 
 export interface HallPosition {
   centerX: number;
@@ -9,14 +9,14 @@ export interface HallPosition {
 }
 
 export const HALL_POSITIONS: Record<string, HallPosition> = {
-  '4.1H': { centerX: 131, centerY: 329, width: 300, height: 185, rotate: 45 },
-  '3.1H': { centerX: 329, centerY: 131, width: 300, height: 185, rotate: 45 },
-  '2.1H': { centerX: 671, centerY: 131, width: 300, height: 185, rotate: -45 },
-  '1.1H': { centerX: 869, centerY: 329, width: 300, height: 185, rotate: -45 },
-  '7.1H': { centerX: 671, centerY: 869, width: 300, height: 185, rotate: 45 },
-  '8.1H': { centerX: 869, centerY: 671, width: 300, height: 185, rotate: 45 },
-  '6.1H': { centerX: 329, centerY: 869, width: 300, height: 185, rotate: -45 },
-  '5.1H': { centerX: 131, centerY: 671, width: 300, height: 185, rotate: -45 },
+  '4.1H': { centerX: 196, centerY: 493, width: 450, height: 277, rotate: 45 },
+  '3.1H': { centerX: 493, centerY: 196, width: 450, height: 277, rotate: 45 },
+  '2.1H': { centerX: 1006, centerY: 196, width: 450, height: 277, rotate: -45 },
+  '1.1H': { centerX: 1303, centerY: 493, width: 450, height: 277, rotate: -45 },
+  '7.1H': { centerX: 1006, centerY: 1303, width: 450, height: 277, rotate: 45 },
+  '8.1H': { centerX: 1303, centerY: 1006, width: 450, height: 277, rotate: 45 },
+  '6.1H': { centerX: 493, centerY: 1303, width: 450, height: 277, rotate: -45 },
+  '5.1H': { centerX: 196, centerY: 1006, width: 450, height: 277, rotate: -45 },
 };
 
 /**
@@ -25,7 +25,7 @@ export const HALL_POSITIONS: Record<string, HallPosition> = {
  */
 export function getGlobalCoordinates(booth: Booth): { x: number; y: number } {
   const pos = HALL_POSITIONS[booth.hall];
-  if (!pos) return { x: 500, y: 500 };
+  if (!pos) return { x: 750, y: 750 };
   
   // Local coordinate relative to the hall center (unrotated)
   const localX = (booth.mapX / 100 - 0.5) * pos.width;
@@ -60,7 +60,7 @@ export function getDistance(p1: { x: number; y: number }, p2: { x: number; y: nu
 export function planOptimalRoute(booths: Booth[]): Booth[] {
   if (booths.length <= 1) return booths;
 
-  const startPoint = { x: 500, y: 960 }; // Bottom center of 1000x1000 canvas (South Entrance)
+  const startPoint = { x: 750, y: 1440 }; // Bottom center of 1500x1500 canvas (South Entrance)
   const unvisited = [...booths];
   const optimized: Booth[] = [];
 
@@ -98,7 +98,7 @@ export function getConvenientRecommendations(
 ): Booth[] {
   if (route.length === 0) {
     // If route is empty, recommend some popular/featured booths that are close to the Entrance
-    const entrance = { x: 500, y: 960 };
+    const entrance = { x: 750, y: 1440 };
     return allBooths
       .filter(b => b.freebies.length > 0)
       .map(b => ({
@@ -145,7 +145,7 @@ export function estimateTotalDistance(route: Booth[]): number {
   if (route.length === 0) return 0;
   
   let totalDist = 0;
-  let currentPoint = { x: 500, y: 960 }; // Start at South Entrance
+  let currentPoint = { x: 750, y: 1440 }; // Start at South Entrance
 
   for (const booth of route) {
     const coords = getGlobalCoordinates(booth);
