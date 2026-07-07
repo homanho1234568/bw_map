@@ -47,17 +47,28 @@ export async function fetchBooths(): Promise<Booth[]> {
       tags: [],
       game_ip: gameIps.join(', '),
       anime_ip: animeIps.join(', '),
-      freebies: (b.freebies || []).map((f: any) => ({
-         id: f.id.toString(),
-         name: f.name,
-         type: f.get_type || 'other',
-         description: f.get_method || '',
-         condition: f.get_method || '',
-         difficulty: 'easy',
-         official_link: f.link,
-         image_url: f.image_url,
-         is_announced: f.is_announced,
-      })),
+      freebies: (b.freebies || []).map((f: any) => {
+         let method = f.get_method || '';
+         let difficulty = 'easy';
+         if (method.startsWith('__difficulty:')) {
+           const match = method.match(/^__difficulty:(easy|medium|hard)__(.*)$/s);
+           if (match) {
+             difficulty = match[1];
+             method = match[2];
+           }
+         }
+         return {
+            id: f.id.toString(),
+            name: f.name,
+            type: f.get_type || 'other',
+            description: method,
+            condition: method,
+            difficulty: difficulty,
+            official_link: f.link,
+            image_url: f.image_url,
+            is_announced: f.is_announced,
+         };
+      }),
       mapX: b.map_x,
       mapY: b.map_y,
       width: 14,
@@ -162,15 +173,19 @@ export async function addBooth(boothData: any, freebiesData: any[]) {
 
   // 4. Insert freebies using new schema
   if (freebiesData && freebiesData.length > 0) {
-    const dbFreebiesData = freebiesData.map(f => ({
-      booth_id: booth.id,
-      name: f.name,
-      get_method: f.condition || f.description,
-      get_type: f.type,
-      link: f.official_link,
-      image_url: f.image_url,
-      is_announced: f.is_announced !== undefined ? f.is_announced : true
-    }));
+    const dbFreebiesData = freebiesData.map(f => {
+      const difficulty = f.difficulty || 'easy';
+      const methodText = `__difficulty:${difficulty}__${f.condition || f.description || ''}`;
+      return {
+        booth_id: booth.id,
+        name: f.name,
+        get_method: methodText,
+        get_type: f.type,
+        link: f.official_link,
+        image_url: f.image_url,
+        is_announced: f.is_announced !== undefined ? f.is_announced : true
+      };
+    });
     
     const { error: freebiesError } = await supabase
       .from('freebies')
@@ -279,15 +294,19 @@ export async function updateBooth(boothId: string, boothData: any, freebiesData:
   await supabase.from('freebies').delete().eq('booth_id', boothId);
 
   if (freebiesData && freebiesData.length > 0) {
-    const dbFreebiesData = freebiesData.map(f => ({
-      booth_id: boothId,
-      name: f.name,
-      get_method: f.condition || f.description,
-      get_type: f.type,
-      link: f.official_link,
-      image_url: f.image_url,
-      is_announced: f.is_announced !== undefined ? f.is_announced : true
-    }));
+    const dbFreebiesData = freebiesData.map(f => {
+      const difficulty = f.difficulty || 'easy';
+      const methodText = `__difficulty:${difficulty}__${f.condition || f.description || ''}`;
+      return {
+        booth_id: boothId,
+        name: f.name,
+        get_method: methodText,
+        get_type: f.type,
+        link: f.official_link,
+        image_url: f.image_url,
+        is_announced: f.is_announced !== undefined ? f.is_announced : true
+      };
+    });
     
     const { error: freebiesError } = await supabase
       .from('freebies')
